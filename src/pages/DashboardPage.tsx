@@ -70,7 +70,6 @@ export default function DashboardPage() {
           </h1>
           <p className="text-muted-foreground">
             {data.company.name} · {data.sampleSize} responses
-            {displayedYear && ` · ${displayedYear}`}
           </p>
         </div>
 
