@@ -15,7 +15,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
 } from "@/components/ui/sidebar"
 
 const navMain = [
@@ -34,8 +33,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { pathname } = useLocation()
   return (
     <Sidebar collapsible="offcanvas" {...props}>
-      <SidebarHeader className="relative">
-        <SidebarTrigger className="absolute top-4 right-4 z-10" />
+      <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton

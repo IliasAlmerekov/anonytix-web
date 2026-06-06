@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest"
 import { Sidebar, SidebarProvider } from "@/components/ui/sidebar"
 
 describe("Sidebar", () => {
-  it("keeps page layout stable while animating the desktop offcanvas panel", () => {
+  it("pushes page content in sync with the desktop offcanvas panel", () => {
     const markup = renderToStaticMarkup(
       createElement(
         SidebarProvider,
@@ -15,7 +15,9 @@ describe("Sidebar", () => {
     )
 
     expect(markup).toContain('data-slot="sidebar-gap"')
-    expect(markup).toContain("w-0 shrink-0")
+    expect(markup).toContain("w-(--sidebar-width)")
+    expect(markup).toContain("transition-[width]")
+    expect(markup).toContain("group-data-[collapsible=offcanvas]:w-0")
     expect(markup).toContain("transition-transform")
     expect(markup).toContain("transform-gpu")
     expect(markup).toContain("group-data-[collapsible=offcanvas]:-translate-x-full")

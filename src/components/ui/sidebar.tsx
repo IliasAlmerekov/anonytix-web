@@ -218,10 +218,8 @@ function Sidebar({
       <div
         data-slot="sidebar-gap"
         className={cn(
-          "relative bg-transparent",
-          collapsible === "offcanvas"
-            ? "w-0 shrink-0"
-            : "w-(--sidebar-width) transition-[width] duration-200 ease-linear",
+          "relative w-(--sidebar-width) shrink-0 bg-transparent transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+          "group-data-[collapsible=offcanvas]:w-0",
           "group-data-[side=right]:rotate-180",
           variant === "floating" || variant === "inset"
             ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
