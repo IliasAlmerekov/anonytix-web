@@ -43,7 +43,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <img
                   src={logoFront}
                   alt="Anonytix"
-                  className="h-12 w-auto object-contain dark:invert"
+                  className="h-20 w-auto object-contain dark:invert"
                 />
               </Link>
             </SidebarMenuButton>
