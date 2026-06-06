@@ -1,73 +1,107 @@
-# React + TypeScript + Vite
+# Anonytix — Web Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Anonytix is an AI-powered platform for **anonymous employee feedback and exit analysis**. This repository contains the web frontend: an HR-facing survey builder and analytics dashboard, plus a public, fully anonymous feedback form for employees.
 
-Currently, two official plugins are available:
+Honest feedback is rare because employees fear that answers can be traced back to them. Anonytix collects feedback anonymously, aggregates it, and surfaces AI-generated insights — so HR sees *what* is happening across teams without ever seeing *who* said it.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+> **Status:** MVP. The app runs entirely on local mocks today and is structured to swap to the Spring Boot API by flipping a single flag (see [Mock mode](#mock-mode)).
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Features
 
-## Expanding the ESLint configuration
+- **Survey builder** — create and edit pulse/exit surveys with five question types (rating, free text, yes/no, single- and multi-choice) and a live preview.
+- **One general invitation link** — publish a survey to get a single shareable link; employees pick their department in the form itself.
+- **Anonymous public form** — a standalone, chrome-free page with required-field validation and department-aware questions; no PII is ever displayed.
+- **Analytics dashboard** — KPIs, department participation breakdown, monthly feedback (positive/negative), a multi-year satisfaction trend, and a department heatmap with small-group suppression.
+- **AI overview** — top-5 AI highlights on the dashboard linking to a dedicated AI analysis page (summary, detected topics, recommended actions).
+- **Year filtering** — a dashboard-wide year selector re-scopes KPIs, participation, and feedback charts.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Tech Stack
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+| Area | Choice |
+|------|--------|
+| Framework | React 19 + TypeScript (`verbatimModuleSyntax`) |
+| Build tool | Vite |
+| Routing | react-router-dom 7 |
+| Styling | Tailwind CSS 4 |
+| Components | shadcn/ui (new-york) |
+| Charts | Recharts (via the shadcn `chart` wrapper) |
+| Icons | lucide-react, @tabler/icons-react |
+| Tests | Vitest (pure-function units) |
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Requirements
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- Node.js 20+ and npm
+
+## Getting Started
+
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The app starts on `http://localhost:5173`. No backend is required — it runs on mock data out of the box.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Demo walkthrough
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+1. **Umfragen** (`/`) — click *Umfrage erstellen* to open the builder.
+2. **Builder** (`/surveys/new`) — edit questions, then *Veröffentlichen und Link erhalten*. The published survey appears back on the Umfragen list, and you get a shareable link.
+3. **Public form** (`/feedback/:token`) — pick a department, answer, and submit anonymously.
+4. **Dashboard** (`/dashboard`) — KPIs, charts, heatmap, and the AI highlights card.
+5. **AI-Overview** (`/ai-overview`) — the full AI analysis.
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start the Vite dev server |
+| `npm run build` | Type-check (`tsc -b`) and build for production |
+| `npm run preview` | Preview the production build locally |
+| `npm run lint` | Run ESLint |
+| `npm test` | Run the Vitest suite |
+
+## Project Structure
+
+```
+src/
+  lib/
+    api.ts          # all endpoint functions (mock ↔ fetch) — the single data boundary
+    config.ts       # USE_MOCKS flag + API base URL
+    types.ts        # contract types
+    form-logic.ts   # pure: filter/build/validate form answers (unit-tested)
+    mock-store.ts   # localStorage CRUD for surveys + submissions (unit-tested)
+  components/
+    ui/             # shadcn-generated primitives
+    charts/         # dashboard chart components
+    app-sidebar.tsx # navigation shell
+  pages/            # one component per route
+public/mocks/       # JSON fixtures served in mock mode
+```
+
+## Mock mode
+
+All data flows through `src/lib/api.ts`. The `USE_MOCKS` flag in `src/lib/config.ts` controls the source:
+
+- **`true` (default)** — reads `public/mocks/*.json` and persists builder surveys + submissions to `localStorage`.
+- **`false`** — calls the live API at `VITE_API_BASE_URL` (defaults to `http://localhost:8080/api/v1`).
+
+Switching to the live backend requires no component changes. The backend must first implement the frontend's model deviations: a single general invitation link, `?departmentId=` form loading, and `departmentId` on submissions (see the spec under `docs/superpowers/specs/`).
+
+Configure the API base URL via `.env`:
+
+```
+VITE_API_BASE_URL=http://localhost:8080/api/v1
+```
+
+## Privacy
+
+No screen ever renders raw free-text answers or individual submissions — only aggregates. The department heatmap suppresses groups below the minimum size to prevent re-identification.
+
+## Testing
+
+Unit tests cover the pure, high-risk logic (answer building/validation, department filtering, mock persistence):
+
+```bash
+npm test
 ```
