@@ -5,6 +5,7 @@ import { buildAnswerRequests, validateAnswers } from '@/lib/form-logic'
 import type { FormAnswers, FormAnswerValue } from '@/lib/form-logic'
 import type { PublicForm } from '@/lib/types'
 import { FormRenderer } from '@/components/FormRenderer'
+import { AnonymityPanel } from '@/components/AnonymityPanel'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -97,11 +98,9 @@ export default function PublicFormPage() {
           {form.description && (
             <p className="text-sm text-muted-foreground">{form.description}</p>
           )}
-          <p className="text-xs text-primary">
-            🔒 Vollständig anonym — deine Antworten werden nur aggregiert ausgewertet.
-          </p>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
+          <AnonymityPanel />
           <FormRenderer
             form={form}
             answers={answers}

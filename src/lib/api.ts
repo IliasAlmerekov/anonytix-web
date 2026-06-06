@@ -96,6 +96,12 @@ export async function getSurvey(id: string): Promise<SurveyWithQuestions> {
   return apiFetch(`/companies/${COMPANY_ID}/surveys/${id}`)
 }
 
+/** Standard template used to seed a new survey in the builder. */
+export async function getSurveyTemplate(): Promise<SurveyWithQuestions> {
+  if (USE_MOCKS) return loadMock<SurveyWithQuestions>('survey-detail.json')
+  return apiFetch(`/companies/${COMPANY_ID}/survey-templates/default`)
+}
+
 /** Persist a survey created/edited in the builder (mock mode → localStorage). */
 export async function saveSurvey(survey: SurveyWithQuestions): Promise<void> {
   if (USE_MOCKS) {

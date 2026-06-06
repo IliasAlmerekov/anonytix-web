@@ -1,27 +1,25 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
-import { getSurvey, publishAndGetLink, saveSurvey } from '@/lib/api'
+import { useNavigate, useParams } from 'react-router-dom'
+import { getSurvey, getSurveyTemplate, publishAndGetLink, saveSurvey } from '@/lib/api'
 import type { PublicForm, Question, SurveyWithQuestions } from '@/lib/types'
 import { QuestionEditor } from '@/components/QuestionEditor'
 import { FormRenderer } from '@/components/FormRenderer'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 
-function newSurvey(): SurveyWithQuestions {
+/** Turn the standard template into a fresh, independently editable survey. */
+function instantiateTemplate(template: SurveyWithQuestions): SurveyWithQuestions {
   return {
+    ...template,
     id: crypto.randomUUID(),
     title: 'Neue Umfrage',
-    description: null,
-    type: 'PULSE',
     status: 'DRAFT',
     createdAt: new Date().toISOString(),
-    questions: [newQuestion(1)],
+    questions: template.questions.map((q) => ({
+      ...q,
+      id: crypto.randomUUID(),
+      options: q.options.map((o) => ({ ...o, id: crypto.randomUUID() })),
+    })),
   }
 }
 
@@ -45,13 +43,12 @@ function newQuestion(position: number): Question {
 
 export default function BuilderPage() {
   const { id = '' } = useParams()
+  const navigate = useNavigate()
   const [survey, setSurvey] = useState<SurveyWithQuestions | null>(null)
-  const [link, setLink] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     if (id === 'new') {
-      setSurvey(newSurvey())
+      getSurveyTemplate().then((tpl) => setSurvey(instantiateTemplate(tpl)))
       return
     }
     getSurvey(id).then(setSurvey)
@@ -82,7 +79,8 @@ export default function BuilderPage() {
     // persist as a published survey so it shows up on the Umfragen list
     await saveSurvey({ ...survey, status: 'PUBLISHED' })
     const result = await publishAndGetLink(survey.id)
-    setLink(result.url)
+    // hand off to the Umfragen list, which shows the link overlay
+    navigate('/', { state: { publishedUrl: result.url } })
   }
 
   return (
@@ -137,28 +135,6 @@ export default function BuilderPage() {
           onAnswerChange={() => {}}
         />
       </section>
-
-      <Dialog open={link !== null} onOpenChange={(open) => !open && setLink(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Einladungslink</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Teile diesen einen allgemeinen Link mit den Mitarbeitern:
-          </p>
-          <div className="flex gap-2">
-            <Input readOnly value={link ?? ''} />
-            <Button
-              onClick={() => {
-                if (link) navigator.clipboard.writeText(link)
-                setCopied(true)
-              }}
-            >
-              {copied ? 'Kopiert' : 'Kopieren'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

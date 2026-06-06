@@ -1,23 +1,46 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { listSurveys } from '@/lib/api'
 import type { Survey } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+
+interface PublishState {
+  publishedUrl?: string
+}
 
 export default function SurveysListPage() {
   const [surveys, setSurveys] = useState<Survey[] | null>(null)
   const navigate = useNavigate()
+  const location = useLocation()
+
+  const publishedUrl = (location.state as PublishState | null)?.publishedUrl ?? null
+  const [link, setLink] = useState<string | null>(publishedUrl)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     listSurveys().then(setSurveys)
   }, [])
+
+  // Clear router state so the overlay doesn't reopen on refresh/back.
+  useEffect(() => {
+    if (publishedUrl) {
+      window.history.replaceState({}, '')
+    }
+  }, [publishedUrl])
 
   return (
     <div className="flex flex-col gap-6">
@@ -52,6 +75,36 @@ export default function SurveysListPage() {
           ))}
         </div>
       )}
+
+      <Dialog
+        open={link !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setLink(null)
+            setCopied(false)
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Umfrage veröffentlicht</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Teile diesen einen allgemeinen Link mit den Mitarbeitern:
+          </p>
+          <div className="flex gap-2">
+            <Input readOnly value={link ?? ''} />
+            <Button
+              onClick={() => {
+                if (link) navigator.clipboard.writeText(link)
+                setCopied(true)
+              }}
+            >
+              {copied ? 'Kopiert' : 'Kopieren'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
