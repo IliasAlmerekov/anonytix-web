@@ -1,5 +1,14 @@
+import { IconTrendingDown, IconTrendingUp } from '@tabler/icons-react'
 import type { Kpi } from '@/lib/types'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import {
+  Card,
+  CardAction,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 
 function formatValue(kpi: Kpi): string {
   if (kpi.unit === 'PERCENT') return `${kpi.value}%`
@@ -9,32 +18,36 @@ function formatValue(kpi: Kpi): string {
 
 export function KpiCards({ kpis }: { kpis: Kpi[] }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {kpis.map((kpi) => (
-        <Card key={kpi.key}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {kpi.label}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold">{formatValue(kpi)}</div>
-            {kpi.change !== undefined && (
-              <p
-                className={
-                  kpi.change < 0 ? 'text-sm text-destructive' : 'text-sm text-emerald-600'
-                }
-              >
-                {kpi.change > 0 ? '+' : ''}
-                {kpi.change} {kpi.changeLabel ?? ''}
-              </p>
-            )}
+    <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card *:data-[slot=card]:shadow-xs @xl/main:grid-cols-2 @5xl/main:grid-cols-4 dark:*:data-[slot=card]:bg-card">
+      {kpis.map((kpi) => {
+        const up = (kpi.change ?? 0) >= 0
+        const TrendIcon = up ? IconTrendingUp : IconTrendingDown
+        return (
+          <Card key={kpi.key} className="@container/card">
+            <CardHeader>
+              <CardDescription>{kpi.label}</CardDescription>
+              <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                {formatValue(kpi)}
+              </CardTitle>
+              {kpi.change !== undefined && (
+                <CardAction>
+                  <Badge variant="outline">
+                    <TrendIcon />
+                    {up ? '+' : ''}
+                    {kpi.change}
+                    {kpi.changeLabel ? ` ${kpi.changeLabel}` : ''}
+                  </Badge>
+                </CardAction>
+              )}
+            </CardHeader>
             {kpi.detail && (
-              <p className="text-sm text-muted-foreground">{kpi.detail}</p>
+              <CardFooter className="flex-col items-start gap-1.5 text-sm">
+                <div className="text-muted-foreground">{kpi.detail}</div>
+              </CardFooter>
             )}
-          </CardContent>
-        </Card>
-      ))}
+          </Card>
+        )
+      })}
     </div>
   )
 }
