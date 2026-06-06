@@ -58,7 +58,7 @@ export default function DashboardPage() {
             <SelectTrigger className="w-[140px]" aria-label="Jahr auswählen">
               <SelectValue placeholder="Jahr" />
             </SelectTrigger>
-            <SelectContent align="end">
+            <SelectContent position="popper" side="bottom" align="end">
               {years.map((y) => (
                 <SelectItem key={y} value={y}>
                   {y}
@@ -76,8 +76,8 @@ export default function DashboardPage() {
         {view.feedbackByMonth && <MonthlyFeedbackChart data={view.feedbackByMonth} />}
       </div>
 
-      {data.satisfactionByYear && year && (
-        <SatisfactionByYearChart data={data.satisfactionByYear} year={year} />
+      {data.satisfactionByYear && (
+        <SatisfactionByYearChart data={data.satisfactionByYear} />
       )}
       <DepartmentHeatmap rows={data.departmentHeatmap} />
 
