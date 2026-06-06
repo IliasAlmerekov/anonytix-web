@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { getSurvey, publishAndGetLink, saveSurvey } from '@/lib/api'
+import { getSurvey, getSurveyTemplate, publishAndGetLink, saveSurvey } from '@/lib/api'
 import type { PublicForm, Question, SurveyWithQuestions } from '@/lib/types'
 import { QuestionEditor } from '@/components/QuestionEditor'
 import { FormRenderer } from '@/components/FormRenderer'
@@ -13,15 +13,19 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 
-function newSurvey(): SurveyWithQuestions {
+/** Turn the standard template into a fresh, independently editable survey. */
+function instantiateTemplate(template: SurveyWithQuestions): SurveyWithQuestions {
   return {
+    ...template,
     id: crypto.randomUUID(),
     title: 'Neue Umfrage',
-    description: null,
-    type: 'PULSE',
     status: 'DRAFT',
     createdAt: new Date().toISOString(),
-    questions: [newQuestion(1)],
+    questions: template.questions.map((q) => ({
+      ...q,
+      id: crypto.randomUUID(),
+      options: q.options.map((o) => ({ ...o, id: crypto.randomUUID() })),
+    })),
   }
 }
 
@@ -51,7 +55,7 @@ export default function BuilderPage() {
 
   useEffect(() => {
     if (id === 'new') {
-      setSurvey(newSurvey())
+      getSurveyTemplate().then((tpl) => setSurvey(instantiateTemplate(tpl)))
       return
     }
     getSurvey(id).then(setSurvey)
