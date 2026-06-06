@@ -23,9 +23,7 @@ export default function SurveysListPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Umfragen</h1>
-        <Button
-          onClick={() => navigate('/surveys/26c98d0d-95f7-492b-a95d-a9bce4409f03')}
-        >
+        <Button onClick={() => navigate('/surveys/new')}>
           Umfrage erstellen
         </Button>
       </div>

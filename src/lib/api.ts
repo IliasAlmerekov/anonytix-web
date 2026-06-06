@@ -1,6 +1,12 @@
 import { API_BASE_URL, COMPANY_ID, USE_MOCKS } from '@/lib/config'
 import { filterQuestionsForDepartment } from '@/lib/form-logic'
-import { countSubmissions, saveSubmission } from '@/lib/mock-store'
+import {
+  countSubmissions,
+  getSavedSurvey,
+  listSavedSurveys,
+  saveSubmission,
+  saveSurvey as saveSurveyToStore,
+} from '@/lib/mock-store'
 import type {
   ApiError,
   DashboardOverview,
@@ -74,13 +80,29 @@ const DEMO_CAMPAIGN_ID = '93b6108f-f005-4f4b-8ce9-952fa0a7ddc4'
 // ---------- HR: surveys + departments ----------
 
 export async function listSurveys(): Promise<Survey[]> {
-  if (USE_MOCKS) return loadMock<Survey[]>('surveys.json')
+  if (USE_MOCKS) {
+    const seed = await loadMock<Survey[]>('surveys.json')
+    const saved = listSavedSurveys(seed.map((s) => s.id))
+    // saved (created in the builder) on top, seed surveys below
+    return [...saved, ...seed]
+  }
   return apiFetch(`/companies/${COMPANY_ID}/surveys`)
 }
 
 export async function getSurvey(id: string): Promise<SurveyWithQuestions> {
-  if (USE_MOCKS) return loadMock<SurveyWithQuestions>('survey-detail.json')
+  if (USE_MOCKS) {
+    return getSavedSurvey(id) ?? loadMock<SurveyWithQuestions>('survey-detail.json')
+  }
   return apiFetch(`/companies/${COMPANY_ID}/surveys/${id}`)
+}
+
+/** Persist a survey created/edited in the builder (mock mode → localStorage). */
+export async function saveSurvey(survey: SurveyWithQuestions): Promise<void> {
+  if (USE_MOCKS) {
+    saveSurveyToStore(survey)
+    return
+  }
+  // live mode: granular question CRUD is wired up later (see plan notes §5)
 }
 
 export async function listDepartments(): Promise<Department[]> {

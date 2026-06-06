@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { getSurvey, publishAndGetLink } from '@/lib/api'
+import { getSurvey, publishAndGetLink, saveSurvey } from '@/lib/api'
 import type { PublicForm, Question, SurveyWithQuestions } from '@/lib/types'
 import { QuestionEditor } from '@/components/QuestionEditor'
 import { FormRenderer } from '@/components/FormRenderer'
@@ -12,6 +12,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+
+function newSurvey(): SurveyWithQuestions {
+  return {
+    id: crypto.randomUUID(),
+    title: 'Neue Umfrage',
+    description: null,
+    type: 'PULSE',
+    status: 'DRAFT',
+    createdAt: new Date().toISOString(),
+    questions: [newQuestion(1)],
+  }
+}
 
 function newQuestion(position: number): Question {
   return {
@@ -38,6 +50,10 @@ export default function BuilderPage() {
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
+    if (id === 'new') {
+      setSurvey(newSurvey())
+      return
+    }
     getSurvey(id).then(setSurvey)
   }, [id])
 
@@ -63,6 +79,8 @@ export default function BuilderPage() {
 
   async function handlePublish() {
     if (!survey) return
+    // persist as a published survey so it shows up on the Umfragen list
+    await saveSurvey({ ...survey, status: 'PUBLISHED' })
     const result = await publishAndGetLink(survey.id)
     setLink(result.url)
   }
