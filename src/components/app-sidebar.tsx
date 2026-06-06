@@ -1,10 +1,6 @@
 import * as React from "react"
 import { Link, NavLink, useLocation } from "react-router-dom"
-import {
-  IconClipboardText,
-  IconDashboard,
-  IconShieldLock,
-} from "@tabler/icons-react"
+import { IconClipboardText, IconDashboard } from "@tabler/icons-react"
 
 import { NavUser } from "@/components/nav-user"
 import {
@@ -42,7 +38,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="data-[slot=sidebar-menu-button]:p-1.5!"
             >
               <Link to="/">
-                <IconShieldLock className="size-5!" />
+                <img src="/logo.svg" alt="Anonytix" className="size-5!" />
                 <span className="text-base font-semibold">Anonytix</span>
               </Link>
             </SidebarMenuButton>
