@@ -37,13 +37,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              className="data-[slot=sidebar-menu-button]:p-1.5!"
+              className="h-auto! data-[slot=sidebar-menu-button]:p-2!"
             >
               <Link to="/">
                 <img
                   src={logoFront}
                   alt="Anonytix"
-                  className="h-6 w-auto object-contain dark:invert"
+                  className="h-12 w-auto object-contain dark:invert"
                 />
               </Link>
             </SidebarMenuButton>
