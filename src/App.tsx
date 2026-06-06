@@ -1,15 +1,46 @@
+import type { CSSProperties } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
-import { AppHeader } from '@/components/AppHeader'
+import { AppSidebar } from '@/components/app-sidebar'
+import { SiteHeader } from '@/components/site-header'
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
+
+function titleFor(pathname: string): string {
+  if (pathname.startsWith('/dashboard')) return 'Dashboard'
+  if (pathname.startsWith('/surveys')) return 'Umfrage bearbeiten'
+  return 'Umfragen'
+}
 
 export default function App() {
+  const { pathname } = useLocation()
   // Public feedback form is a standalone page without HR chrome.
-  const isPublic = useLocation().pathname.startsWith('/feedback/')
-  return (
-    <div className="min-h-svh bg-background">
-      {!isPublic && <AppHeader />}
-      <main className="mx-auto max-w-6xl px-4 py-6">
+  const isPublic = pathname.startsWith('/feedback/')
+
+  if (isPublic) {
+    return (
+      <div className="min-h-svh bg-background">
         <Outlet />
-      </main>
-    </div>
+      </div>
+    )
+  }
+
+  return (
+    <SidebarProvider
+      style={
+        {
+          '--sidebar-width': 'calc(var(--spacing) * 72)',
+          '--header-height': 'calc(var(--spacing) * 12)',
+        } as CSSProperties
+      }
+    >
+      <AppSidebar variant="inset" />
+      <SidebarInset>
+        <SiteHeader title={titleFor(pathname)} />
+        <div className="flex flex-1 flex-col">
+          <div className="@container/main flex flex-1 flex-col gap-2 p-4 lg:p-6">
+            <Outlet />
+          </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }
