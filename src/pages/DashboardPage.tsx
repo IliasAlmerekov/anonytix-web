@@ -27,7 +27,7 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      <KpiCards kpis={data.kpis} />
+      <KpiCards kpis={data.kpis.slice(0, 4)} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <SentimentChart data={data.sentimentDistribution} />
