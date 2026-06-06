@@ -2,7 +2,7 @@ import * as React from "react"
 import { Link, NavLink, useLocation } from "react-router-dom"
 import { IconClipboardText, IconDashboard, IconSparkles } from "@tabler/icons-react"
 
-import logoFront from "@/assets/logo_icon.png"
+import logoFront from "@/assets/logo2-sidebar.png"
 
 import { NavUser } from "@/components/nav-user"
 import {
@@ -33,18 +33,25 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { pathname } = useLocation()
   return (
     <Sidebar collapsible="offcanvas" {...props}>
-      <SidebarHeader>
+      <SidebarHeader className="p-1">
         <SidebarMenu>
-          <SidebarMenuItem>
+          <SidebarMenuItem className="flex justify-center">
             <SidebarMenuButton
               asChild
-              className="h-auto! data-[slot=sidebar-menu-button]:p-2!"
+              className="h-auto! w-full justify-center data-[slot=sidebar-menu-button]:p-0!"
             >
-              <Link to="/">
+              <Link
+                to="/"
+                className="flex min-h-10 w-full items-center justify-center text-center"
+              >
                 <img
                   src={logoFront}
                   alt="Anonytix"
-                  className="h-20 w-auto object-contain dark:invert"
+                  width={888}
+                  height={204}
+                  decoding="async"
+                  draggable={false}
+                  className="block h-auto w-full max-w-[7.5rem] object-contain dark:invert"
                 />
               </Link>
             </SidebarMenuButton>
