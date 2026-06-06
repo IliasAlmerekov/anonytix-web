@@ -20,9 +20,13 @@ import type {
   DepartmentDashboard,
   PublicForm,
   PublishResult,
+  Question,
+  QuestionType,
   SubmissionResponse,
   SubmitFeedbackRequest,
   Survey,
+  SurveyStatus,
+  SurveyType,
   SurveyWithQuestions,
 } from '@/lib/types'
 
@@ -83,6 +87,91 @@ export function buildPublicForm(
 
 const DEMO_CAMPAIGN_ID = '93b6108f-f005-4f4b-8ce9-952fa0a7ddc4'
 
+// Default server-side template used to seed a brand-new survey in live mode.
+const DEFAULT_TEMPLATE_KEY = 'EMPLOYEE_SATISFACTION'
+
+// ---------- live <-> model mapping for the survey builder ----------
+
+interface QuestionApiResponse {
+  id: string
+  text: string
+  helpText: string | null
+  type: QuestionType
+  category: string
+  required: boolean
+  position: number
+  minimumValue: number | null
+  maximumValue: number | null
+  maximumLength: number | null
+  analyzeWithAi: boolean
+  departmentIds: string[]
+  options: { id: string; label: string; value: string; position: number }[]
+}
+
+interface SurveyApiResponse {
+  id: string
+  title: string
+  type: SurveyType
+  status: SurveyStatus
+  version: number
+  description: string | null
+  questions: QuestionApiResponse[]
+}
+
+/** Map a backend SurveyResponse to the frontend SurveyWithQuestions model. */
+function toSurveyModel(r: SurveyApiResponse): SurveyWithQuestions {
+  return {
+    id: r.id,
+    title: r.title,
+    description: r.description ?? null,
+    type: r.type,
+    status: r.status,
+    // SurveyResponse has no createdAt; the builder doesn't display it.
+    createdAt: new Date().toISOString(),
+    questions: (r.questions ?? []).map((q) => ({
+      id: q.id,
+      text: q.text,
+      helpText: q.helpText ?? null,
+      type: q.type,
+      category: q.category,
+      required: q.required,
+      position: q.position,
+      minimumValue: q.minimumValue ?? null,
+      maximumValue: q.maximumValue ?? null,
+      maximumLength: q.maximumLength ?? null,
+      analyzeWithAi: q.analyzeWithAi,
+      departmentIds: q.departmentIds ?? [],
+      options: (q.options ?? []).map((o) => ({
+        id: o.id,
+        label: o.label,
+        value: o.value,
+        position: o.position,
+      })),
+    })),
+  }
+}
+
+/** Map a frontend Question to the backend QuestionWriteRequest body. */
+function toQuestionWriteRequest(q: Question) {
+  return {
+    text: q.text,
+    helpText: q.helpText,
+    type: q.type,
+    category: q.category,
+    required: q.required,
+    minimumValue: q.minimumValue,
+    maximumValue: q.maximumValue,
+    maximumLength: q.maximumLength,
+    analyzeWithAi: q.analyzeWithAi,
+    departmentIds: q.departmentIds,
+    options: q.options.map((o, i) => ({
+      label: o.label,
+      value: o.value,
+      position: o.position || i + 1,
+    })),
+  }
+}
+
 // ---------- HR: surveys + departments ----------
 
 export async function listSurveys(): Promise<Survey[]> {
@@ -99,22 +188,84 @@ export async function getSurvey(id: string): Promise<SurveyWithQuestions> {
   if (USE_MOCKS) {
     return getSavedSurvey(id) ?? loadMock<SurveyWithQuestions>('survey-detail.json')
   }
-  return apiFetch(`/companies/${COMPANY_ID}/surveys/${id}`)
+  return toSurveyModel(
+    await apiFetch<SurveyApiResponse>(`/companies/${COMPANY_ID}/surveys/${id}`),
+  )
 }
 
-/** Standard template used to seed a new survey in the builder. */
+/**
+ * Seed a new survey for the builder.
+ * Mock mode → static template JSON. Live mode → the backend has no template
+ * GET endpoint; it materialises a template only when a survey is created, so we
+ * create a real DRAFT survey from the standard template and return it (with
+ * real survey + question ids the builder then edits in place).
+ */
 export async function getSurveyTemplate(): Promise<SurveyWithQuestions> {
   if (USE_MOCKS) return loadMock<SurveyWithQuestions>('survey-detail.json')
-  return apiFetch(`/companies/${COMPANY_ID}/survey-templates/default`)
+  const created = await apiFetch<SurveyApiResponse>(
+    `/companies/${COMPANY_ID}/surveys`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        title: 'New survey',
+        description: null,
+        type: 'PULSE',
+        templateKey: DEFAULT_TEMPLATE_KEY,
+      }),
+    },
+  )
+  return toSurveyModel(created)
 }
 
-/** Persist a survey created/edited in the builder (mock mode → localStorage). */
+/**
+ * Persist a survey created/edited in the builder.
+ * Mock mode → localStorage. Live mode → reconcile the draft on the backend:
+ * delete the current questions, re-create them from the edited state in order,
+ * then patch the survey meta. The survey must already exist (created via
+ * getSurveyTemplate / getSurvey) and still be a DRAFT.
+ */
 export async function saveSurvey(survey: SurveyWithQuestions): Promise<void> {
   if (USE_MOCKS) {
     saveSurveyToStore(survey)
     return
   }
-  // live mode: granular question CRUD is wired up later (see plan notes §5)
+
+  const base = `/companies/${COMPANY_ID}/surveys/${survey.id}`
+  const current = await apiFetch<SurveyApiResponse>(base)
+
+  // Replace the server-side question set with the edited one (sequential to
+  // keep positions deterministic and stay within the draft's active set).
+  for (const q of current.questions ?? []) {
+    await apiFetch(`${base}/questions/${q.id}`, { method: 'DELETE' })
+  }
+  const createdIds: string[] = []
+  for (const q of survey.questions) {
+    const created = await apiFetch<{ id: string }>(`${base}/questions`, {
+      method: 'POST',
+      body: JSON.stringify(toQuestionWriteRequest(q)),
+    })
+    createdIds.push(created.id)
+  }
+  if (createdIds.length > 0) {
+    await apiFetch(`${base}/questions/order`, {
+      method: 'PUT',
+      body: JSON.stringify({ questionIds: createdIds }),
+    })
+  }
+
+  // Title/description is secondary — don't let a failure here block publishing
+  // the questions (older backends 500 on this PATCH; the survey is still usable).
+  try {
+    await apiFetch(base, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        title: survey.title,
+        description: survey.description,
+      }),
+    })
+  } catch (reason) {
+    console.warn('Survey title/description not saved:', reason)
+  }
 }
 
 export async function listDepartments(): Promise<Department[]> {
@@ -148,19 +299,34 @@ export async function publishAndGetLink(surveyId: string): Promise<PublishResult
       expiresAt: '2026-06-20T21:59:59Z',
     }
   }
+  // Campaign window: now .. +90d. Both dates are required by the backend and
+  // endsAt must be strictly after startsAt; the invitation must expire no later
+  // than endsAt and in the future — so we reuse endsAt for the invitation.
+  const startsAt = new Date().toISOString()
+  const endsAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()
+
   await apiFetch(`/companies/${COMPANY_ID}/surveys/${surveyId}/publish`, { method: 'POST' })
   const campaign = await apiFetch<{ id: string }>(`/companies/${COMPANY_ID}/campaigns`, {
     method: 'POST',
-    body: JSON.stringify({ surveyId, name: 'Campaign', startsAt: null, endsAt: null }),
+    body: JSON.stringify({ surveyId, name: 'Campaign', startsAt, endsAt }),
   })
   await apiFetch(`/companies/${COMPANY_ID}/campaigns/${campaign.id}/activate`, { method: 'POST' })
-  const batch = await apiFetch<{ campaignId: string; invitations: { url: string; expiresAt: string }[] }>(
-    `/companies/${COMPANY_ID}/campaigns/${campaign.id}/invitations`,
-    { method: 'POST', body: JSON.stringify({ expiresAt: null }) },
-  )
-  const first = batch.invitations[0]
-  const token = first.url.split('/').pop() ?? ''
-  return { campaignId: batch.campaignId, url: first.url, token, expiresAt: first.expiresAt }
+  // The endpoint returns a single InvitationResponse: { campaignId, token, url, expiresAt }.
+  const invitation = await apiFetch<{
+    campaignId: string
+    token: string
+    url: string
+    expiresAt: string
+  }>(`/companies/${COMPANY_ID}/campaigns/${campaign.id}/invitations`, {
+    method: 'POST',
+    body: JSON.stringify({ expiresAt: endsAt }),
+  })
+  return {
+    campaignId: invitation.campaignId,
+    url: invitation.url,
+    token: invitation.token,
+    expiresAt: invitation.expiresAt,
+  }
 }
 
 // ---------- public form ----------
