@@ -20,6 +20,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { getSurvey, getSurveyTemplate, publishAndGetLink, saveSurvey } from '@/lib/api'
+import { USE_MOCKS } from '@/lib/config'
 import type { PublicForm, Question, SurveyWithQuestions } from '@/lib/types'
 import { QuestionEditor } from '@/components/QuestionEditor'
 import { FormRenderer } from '@/components/FormRenderer'
@@ -65,10 +66,17 @@ export default function BuilderPage() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const [survey, setSurvey] = useState<SurveyWithQuestions | null>(null)
+  const [publishing, setPublishing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (id === 'new') {
-      getSurveyTemplate().then((tpl) => setSurvey(instantiateTemplate(tpl)))
+      // In live mode getSurveyTemplate already creates a real DRAFT with real
+      // survey/question ids — use it as-is so edits map to the backend. In mock
+      // mode it's a static template, so clone it into a fresh editable survey.
+      getSurveyTemplate().then((tpl) =>
+        setSurvey(USE_MOCKS ? instantiateTemplate(tpl) : tpl),
+      )
       return
     }
     getSurvey(id).then(setSurvey)
@@ -114,11 +122,22 @@ export default function BuilderPage() {
 
   async function handlePublish() {
     if (!survey) return
-    // Persist as a published survey so it shows up on the Surveys list.
-    await saveSurvey({ ...survey, status: 'PUBLISHED' })
-    const result = await publishAndGetLink(survey.id)
-    // Hand off to the Surveys list, which shows the link overlay.
-    navigate('/', { state: { publishedUrl: result.url } })
+    setPublishing(true)
+    setError(null)
+    try {
+      // Persist edits (mock → localStorage; live → reconcile questions on the
+      // draft), then publish + create a campaign + invitation to get the link.
+      await saveSurvey({ ...survey, status: 'PUBLISHED' })
+      const result = await publishAndGetLink(survey.id)
+      // Hand off to the Surveys list, which shows the link overlay.
+      navigate('/', { state: { publishedUrl: result.url } })
+    } catch (reason: unknown) {
+      setError(
+        reason instanceof Error ? reason.message : 'Could not publish the survey.',
+      )
+    } finally {
+      setPublishing(false)
+    }
   }
 
   return (
@@ -176,8 +195,11 @@ export default function BuilderPage() {
           >
             Add question
           </Button>
-          <Button onClick={handlePublish}>Publish and get link</Button>
+          <Button onClick={handlePublish} disabled={publishing}>
+            {publishing ? 'Publishing...' : 'Publish and get link'}
+          </Button>
         </div>
+        {error && <p className="text-sm text-destructive">{error}</p>}
       </section>
 
       <section className="rounded-lg border bg-muted/30 p-4">
